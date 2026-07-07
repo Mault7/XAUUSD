@@ -1,0 +1,18 @@
+from dataclasses import dataclass
+
+from backend.domain.value_objects.signal_direction import SignalDirection
+
+
+@dataclass(frozen=True)
+class RiskPlan:
+    direction: SignalDirection
+    entry: float
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: float
+    take_profit_3: float
+    risk_percent: float
+    lot_size: float
+    risk_reward: float
+    explanation: str
+

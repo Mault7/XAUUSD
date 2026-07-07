@@ -1,0 +1,16 @@
+weights:
+  trend_alignment: 20
+  structure: 15
+  support_resistance: 10
+  rsi: 10
+  atr: 5
+  macd: 10
+  adx: 10
+  volume: 10
+  smart_money: 10
+  news_filter: 10
+
+defaults:
+  signal_threshold: 75
+  suppression_floor: 45
+

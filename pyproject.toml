@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading-signal-assistant"
+version = "0.1.0"
+description = "Institutional trading signal assistant MVP"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0,<1.0.0",
+  "uvicorn[standard]>=0.30.0,<1.0.0",
+  "pydantic>=2.8.0,<3.0.0",
+  "pydantic-settings>=2.3.0,<3.0.0",
+  "pyyaml>=6.0.1,<7.0.0",
+  "sqlalchemy>=2.0.0,<3.0.0",
+  "alembic>=1.13.0,<2.0.0",
+  "psycopg[binary]>=3.2.0,<4.0.0",
+  "redis>=5.0.0,<6.0.0",
+  "apscheduler>=3.10.0,<4.0.0",
+  "pandas>=2.2.0,<3.0.0",
+  "numpy>=1.26.0,<3.0.0",
+  "python-telegram-bot>=21.0.0,<22.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "black>=24.4.0,<25.0.0",
+  "httpx>=0.27.0,<1.0.0",
+  "mypy>=1.10.0,<2.0.0",
+  "pytest>=8.2.0,<9.0.0",
+  "pytest-cov>=5.0.0,<6.0.0",
+  "ruff>=0.5.0,<1.0.0",
+]
+mt5 = [
+  "MetaTrader5>=5.0.45,<6.0.0",
+]
+talib = [
+  "TA-Lib>=0.4.28,<0.5.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "W"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
