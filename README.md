@@ -94,12 +94,12 @@ This repository contains a production-oriented scaffold for a Trading Signal Ass
 - Reply keyboard buttons are generated automatically from enabled assets
 - Run it with `python -m backend.telegram_bot.runner`
 
-## Fixed-Loss Risk Mode
+## Fixed-Lot Risk Mode
 
-- Set `RISK_MODE=fixed_loss` to use a global money-risk model instead of account-percent sizing
-- `MAX_LOSS_USD` controls the maximum advisory loss per signal
+- Set `RISK_MODE=fixed_lot` to use a fixed MT5 lot size instead of account-percent sizing
 - `FIXED_LOT_SIZE` keeps a fixed MT5 volume such as `0.01`
-- In this mode the stop loss is derived from the symbol specification returned by MT5 and targets are anchored to nearby market structure when available
+- In this mode the stop loss and targets are derived from ATR, market structure, and timeframe-specific profiles
+- The alert shows the estimated money risk implied by that variable stop
 
 ## Automatic Alerts
 

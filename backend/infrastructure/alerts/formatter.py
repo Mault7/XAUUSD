@@ -55,7 +55,7 @@ class TelegramAlertFormatter(AlertFormatter):
                 "",
                 "Gestion de riesgo",
                 f"Lote: {risk_plan.lot_size:.2f}",
-                f"Perdida maxima estimada: {risk_plan.risk_amount:.2f} USD",
+                f"Perdida estimada: {risk_plan.risk_amount:.2f} USD",
                 "",
                 "Riesgo/Beneficio",
                 f"{risk_plan.risk_reward:.2f}",

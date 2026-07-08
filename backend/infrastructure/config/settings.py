@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     market_data_provider: str = Field(default="memory", alias="MARKET_DATA_PROVIDER")
     alert_channel: str = Field(default="log", alias="ALERT_CHANNEL")
     account_size: float = Field(default=10000.0, alias="ACCOUNT_SIZE")
-    risk_mode: str = Field(default="percent_of_account", alias="RISK_MODE")
+    risk_mode: str = Field(default="fixed_lot", alias="RISK_MODE")
     max_loss_usd: float = Field(default=10.0, alias="MAX_LOSS_USD")
     fixed_lot_size: float = Field(default=0.01, alias="FIXED_LOT_SIZE")
     mt5_login: int | None = Field(default=None, alias="MT5_LOGIN")

@@ -5,6 +5,7 @@ from backend.domain.entities.risk_plan import RiskPlan
 from backend.domain.entities.symbol_spec import SymbolSpec
 from backend.domain.entities.structure_snapshot import StructureSnapshot
 from backend.domain.value_objects.signal_direction import SignalDirection
+from backend.domain.value_objects.timeframe import Timeframe
 from backend.infrastructure.config.settings import Settings
 
 
@@ -24,20 +25,28 @@ class DefaultRiskEngine(RiskEngine):
         last_close = snapshot.candles[-1].close
         direction = _resolve_direction(structure)
         entry = last_close
+        atr = _indicator_value(indicators, "ATR", fallback=max(last_close * 0.002, 0.0001))
+        profile = _timeframe_profile(snapshot.timeframe)
 
-        if self._settings.risk_mode.lower() == "fixed_loss":
+        if self._settings.risk_mode.lower() in {"fixed_loss", "fixed_lot"}:
             lot_size = _normalize_volume(self._settings.fixed_lot_size, symbol_spec)
-            risk_amount = self._settings.max_loss_usd
-            risk_per_unit = _price_distance_for_fixed_loss(symbol_spec, lot_size, risk_amount)
-            stop_loss = _stop_from_fixed_loss(entry, direction, risk_per_unit, symbol_spec)
-            targets, target_note = _resolve_technical_targets(
+            stop_loss, risk_per_unit, stop_note = _resolve_variable_stop(
                 entry=entry,
                 direction=direction,
+                atr=atr,
                 structure=structure,
-                fallback_distance=risk_per_unit,
+                timeframe=snapshot.timeframe,
             )
+            targets, target_note = _resolve_timeframe_targets(
+                entry=entry,
+                direction=direction,
+                atr=atr,
+                structure=structure,
+                timeframe=snapshot.timeframe,
+                min_distance=risk_per_unit,
+            )
+            risk_amount = _estimate_risk_amount(symbol_spec, lot_size, risk_per_unit)
         else:
-            atr = _indicator_value(indicators, "ATR", fallback=max(last_close * 0.002, 0.0001))
             anchor_level = _resolve_anchor_level(structure, direction, last_close)
             stop_buffer = atr * 0.5
             if direction == SignalDirection.BULLISH:
@@ -50,6 +59,9 @@ class DefaultRiskEngine(RiskEngine):
             lot_size = round(risk_amount / risk_per_unit, 4)
             targets = _project_r_multiples(entry, direction, risk_per_unit)
             target_note = "Los objetivos se proyectaron en 1R, 2R y 3R."
+            stop_note = (
+                f"El stop se calculo con ATR {atr:.4f} y estructura, siguiendo el perfil de {profile.name}."
+            )
 
         take_profit_1, take_profit_2, take_profit_3 = targets
         reward = abs(take_profit_1 - entry)
@@ -61,6 +73,7 @@ class DefaultRiskEngine(RiskEngine):
             risk_amount=risk_amount,
             lot_size=lot_size,
             risk_mode=self._settings.risk_mode,
+            stop_note=stop_note,
             target_note=target_note,
         )
 
@@ -109,65 +122,33 @@ def _normalize_volume(volume: float, symbol_spec: SymbolSpec) -> float:
     return round(max(normalized, symbol_spec.volume_min), 4)
 
 
-def _price_distance_for_fixed_loss(
-    symbol_spec: SymbolSpec, lot_size: float, risk_amount: float
-) -> float:
-    monetary_per_price_unit = (symbol_spec.tick_value / symbol_spec.tick_size) * lot_size
-    if monetary_per_price_unit <= 0:
-        return max(symbol_spec.point, 1e-4)
-    raw_distance = risk_amount / monetary_per_price_unit
-    min_distance = max(symbol_spec.tick_size, symbol_spec.point, 1e-4)
-    ticks = max(round(raw_distance / min_distance), 1)
-    return ticks * min_distance
-
-
-def _stop_from_fixed_loss(
-    entry: float,
-    direction: SignalDirection,
-    risk_per_unit: float,
-    symbol_spec: SymbolSpec,
-) -> float:
-    if direction == SignalDirection.BULLISH:
-        return entry - max(risk_per_unit, symbol_spec.tick_size)
-    return entry + max(risk_per_unit, symbol_spec.tick_size)
-
-
-def _resolve_technical_targets(
+def _resolve_timeframe_targets(
     *,
     entry: float,
     direction: SignalDirection,
+    atr: float,
     structure: StructureSnapshot,
-    fallback_distance: float,
+    timeframe: Timeframe,
+    min_distance: float,
 ) -> tuple[tuple[float, float, float], str]:
-    candidates: list[float] = []
-    if direction == SignalDirection.BULLISH:
-        candidates.extend(level.price for level in structure.resistance_levels if level.price > entry)
-        candidates.extend(point.price for point in structure.swing_highs if point.price > entry)
-        ordered = sorted(set(round(price, 6) for price in candidates))
-    else:
-        candidates.extend(level.price for level in structure.support_levels if level.price < entry)
-        candidates.extend(point.price for point in structure.swing_lows if point.price < entry)
-        ordered = sorted(set(round(price, 6) for price in candidates), reverse=True)
+    profile = _timeframe_profile(timeframe)
+    candidates = _target_candidates(entry, direction, structure)
+    targets: list[float] = []
 
-    if not ordered:
-        return (
-            _project_r_multiples(entry, direction, fallback_distance),
-            "No habia un objetivo estructural cercano, asi que los objetivos se proyectaron desde la distancia actual del riesgo.",
+    for multiplier in profile.target_atr_multipliers:
+        cap_distance = max(atr * multiplier, min_distance)
+        target = _select_capped_target(
+            entry=entry,
+            direction=direction,
+            candidates=candidates,
+            cap_distance=cap_distance,
+            previous_target=targets[-1] if targets else None,
         )
-
-    targets = ordered[:3]
-    while len(targets) < 3:
-        if len(targets) == 1:
-            extension = abs(targets[0] - entry)
-        else:
-            extension = abs(targets[-1] - targets[-2])
-        extension = max(extension, fallback_distance)
-        next_target = targets[-1] + extension if direction == SignalDirection.BULLISH else targets[-1] - extension
-        targets.append(round(next_target, 6))
+        targets.append(round(target, 6))
 
     return (
         (targets[0], targets[1], targets[2]),
-        "Los objetivos se anclaron a niveles estructurales cercanos y solo se extendieron cuando faltaban niveles adicionales.",
+        f"Los objetivos se calcularon con estructura cercana y limites de ATR para {profile.name}, evitando recorridos inflados para este timeframe.",
     )
 
 
@@ -189,6 +170,160 @@ def _project_r_multiples(
     )
 
 
+def _resolve_variable_stop(
+    *,
+    entry: float,
+    direction: SignalDirection,
+    atr: float,
+    structure: StructureSnapshot,
+    timeframe: Timeframe,
+) -> tuple[float, float, str]:
+    profile = _timeframe_profile(timeframe)
+    buffer = atr * profile.stop_buffer_atr
+    min_distance = atr * profile.min_stop_atr
+    max_distance = atr * profile.max_stop_atr
+    anchor_level = _resolve_anchor_level(structure, direction, entry)
+
+    if direction == SignalDirection.BULLISH:
+        structure_stop = anchor_level - buffer
+        raw_distance = max(entry - structure_stop, 0.0)
+    else:
+        structure_stop = anchor_level + buffer
+        raw_distance = max(structure_stop - entry, 0.0)
+
+    clamped_distance = min(max(raw_distance, min_distance), max_distance)
+    if direction == SignalDirection.BULLISH:
+        stop_loss = entry - clamped_distance
+    else:
+        stop_loss = entry + clamped_distance
+
+    note = (
+        f"El stop se ajusto con ATR {atr:.4f}, estructura y limites de {profile.min_stop_atr:.2f} a {profile.max_stop_atr:.2f} ATR para {profile.name}."
+    )
+    return stop_loss, max(clamped_distance, 1e-9), note
+
+
+def _estimate_risk_amount(symbol_spec: SymbolSpec, lot_size: float, risk_per_unit: float) -> float:
+    monetary_per_price_unit = (symbol_spec.tick_value / max(symbol_spec.tick_size, 1e-9)) * lot_size
+    return risk_per_unit * monetary_per_price_unit
+
+
+def _target_candidates(
+    entry: float,
+    direction: SignalDirection,
+    structure: StructureSnapshot,
+) -> list[float]:
+    candidates: list[float] = []
+    if direction == SignalDirection.BULLISH:
+        candidates.extend(level.price for level in structure.resistance_levels if level.price > entry)
+        candidates.extend(point.price for point in structure.swing_highs if point.price > entry)
+        return sorted(set(round(price, 6) for price in candidates))
+
+    candidates.extend(level.price for level in structure.support_levels if level.price < entry)
+    candidates.extend(point.price for point in structure.swing_lows if point.price < entry)
+    return sorted(set(round(price, 6) for price in candidates), reverse=True)
+
+
+def _select_capped_target(
+    *,
+    entry: float,
+    direction: SignalDirection,
+    candidates: list[float],
+    cap_distance: float,
+    previous_target: float | None,
+) -> float:
+    if direction == SignalDirection.BULLISH:
+        fallback = entry + cap_distance
+        floor = previous_target if previous_target is not None else entry
+        for candidate in candidates:
+            if candidate <= floor:
+                continue
+            if candidate <= fallback:
+                return candidate
+        return fallback
+
+    fallback = entry - cap_distance
+    ceiling = previous_target if previous_target is not None else entry
+    for candidate in candidates:
+        if candidate >= ceiling:
+            continue
+        if candidate >= fallback:
+            return candidate
+    return fallback
+
+
+class _TimeframeRiskProfile:
+    def __init__(
+        self,
+        *,
+        name: str,
+        min_stop_atr: float,
+        max_stop_atr: float,
+        stop_buffer_atr: float,
+        target_atr_multipliers: tuple[float, float, float],
+    ) -> None:
+        self.name = name
+        self.min_stop_atr = min_stop_atr
+        self.max_stop_atr = max_stop_atr
+        self.stop_buffer_atr = stop_buffer_atr
+        self.target_atr_multipliers = target_atr_multipliers
+
+
+def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
+    profiles = {
+        Timeframe.M5: _TimeframeRiskProfile(
+            name="M5",
+            min_stop_atr=0.60,
+            max_stop_atr=1.20,
+            stop_buffer_atr=0.12,
+            target_atr_multipliers=(0.80, 1.20, 1.80),
+        ),
+        Timeframe.M15: _TimeframeRiskProfile(
+            name="M15",
+            min_stop_atr=0.70,
+            max_stop_atr=1.50,
+            stop_buffer_atr=0.15,
+            target_atr_multipliers=(1.00, 1.60, 2.20),
+        ),
+        Timeframe.H1: _TimeframeRiskProfile(
+            name="H1",
+            min_stop_atr=0.90,
+            max_stop_atr=1.80,
+            stop_buffer_atr=0.18,
+            target_atr_multipliers=(1.20, 2.00, 2.80),
+        ),
+        Timeframe.H4: _TimeframeRiskProfile(
+            name="H4",
+            min_stop_atr=1.00,
+            max_stop_atr=2.20,
+            stop_buffer_atr=0.22,
+            target_atr_multipliers=(1.50, 2.50, 3.50),
+        ),
+        Timeframe.D1: _TimeframeRiskProfile(
+            name="D1",
+            min_stop_atr=1.20,
+            max_stop_atr=2.60,
+            stop_buffer_atr=0.25,
+            target_atr_multipliers=(1.80, 3.00, 4.20),
+        ),
+        Timeframe.W1: _TimeframeRiskProfile(
+            name="W1",
+            min_stop_atr=1.40,
+            max_stop_atr=3.00,
+            stop_buffer_atr=0.30,
+            target_atr_multipliers=(2.20, 3.60, 5.00),
+        ),
+        Timeframe.MN: _TimeframeRiskProfile(
+            name="MN",
+            min_stop_atr=1.60,
+            max_stop_atr=3.40,
+            stop_buffer_atr=0.35,
+            target_atr_multipliers=(2.60, 4.20, 6.00),
+        ),
+    }
+    return profiles[timeframe]
+
+
 def _build_explanation(
     *,
     direction: SignalDirection,
@@ -197,17 +332,18 @@ def _build_explanation(
     risk_amount: float,
     lot_size: float,
     risk_mode: str,
+    stop_note: str,
     target_note: str,
 ) -> str:
     operation = "compra" if direction == SignalDirection.BULLISH else "venta"
-    if risk_mode.lower() == "fixed_loss":
+    if risk_mode.lower() in {"fixed_loss", "fixed_lot"}:
         return (
             f"Operacion de {operation} desde {entry:.4f} con stop en {stop_loss:.4f}. "
-            f"El modo de perdida fija limita el riesgo estimado a {risk_amount:.2f} USD usando un lote de {lot_size:.2f}. "
-            f"{target_note}"
+            f"El lote fijo de {lot_size:.2f} deja una perdida estimada de {risk_amount:.2f} USD. "
+            f"{stop_note} {target_note}"
         )
     return (
         f"Operacion de {operation} desde {entry:.4f} con stop en {stop_loss:.4f}. "
         f"El modo porcentual dimensiona la operacion alrededor de {risk_amount:.2f} unidades monetarias de la cuenta. "
-        f"{target_note}"
+        f"{stop_note} {target_note}"
     )
