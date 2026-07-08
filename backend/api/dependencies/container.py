@@ -34,7 +34,7 @@ class AppContainer:
         self.alert_formatter = TelegramAlertFormatter()
         self.indicator_engine = DefaultIndicatorEngine()
         self.structure_engine = DefaultStructureEngine()
-        self.risk_engine = DefaultRiskEngine()
+        self.risk_engine = DefaultRiskEngine(settings)
         self.scoring_engine = DefaultScoringEngine(self.scoring_config_loader)
         self.analysis_pipeline_service = AnalysisPipelineService(
             settings,

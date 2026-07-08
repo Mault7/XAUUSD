@@ -47,10 +47,12 @@ class AnalysisPipelineService:
         snapshot = self._market_data_provider.get_market_snapshot(
             provider_symbol, Timeframe(timeframe)
         )
+        symbol_spec = self._market_data_provider.get_symbol_spec(provider_symbol)
         indicators = self._indicator_engine.analyze(snapshot)
         structure = self._structure_engine.analyze(snapshot)
         risk_plan = self._risk_engine.build_plan(
             snapshot=snapshot,
+            symbol_spec=symbol_spec,
             indicators=indicators,
             structure=structure,
             risk_percent=risk_percent,

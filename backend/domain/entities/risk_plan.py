@@ -15,4 +15,4 @@ class RiskPlan:
     lot_size: float
     risk_reward: float
     explanation: str
-
+    risk_amount: float = 0.0

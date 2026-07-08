@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from backend.application.ports.market_data import MarketDataProvider
 from backend.domain.entities.candle import Candle
 from backend.domain.entities.market_snapshot import MarketSnapshot
+from backend.domain.entities.symbol_spec import SymbolSpec
 from backend.domain.value_objects.timeframe import Timeframe
 
 
@@ -39,3 +40,14 @@ class MemoryMarketDataProvider(MarketDataProvider):
             candles=candles,
         )
 
+    def get_symbol_spec(self, symbol: str) -> SymbolSpec:
+        return SymbolSpec(
+            symbol=symbol,
+            point=0.01,
+            tick_size=0.01,
+            tick_value=1.0,
+            contract_size=100.0,
+            volume_min=0.01,
+            volume_step=0.01,
+            volume_max=100.0,
+        )

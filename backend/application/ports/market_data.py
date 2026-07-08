@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from backend.domain.entities.market_snapshot import MarketSnapshot
+from backend.domain.entities.symbol_spec import SymbolSpec
 from backend.domain.value_objects.timeframe import Timeframe
 
 
@@ -20,3 +21,6 @@ class MarketDataProvider(ABC):
     ) -> MarketSnapshot:
         """Return normalized candle data for a symbol and timeframe."""
 
+    @abstractmethod
+    def get_symbol_spec(self, symbol: str) -> SymbolSpec:
+        """Return normalized trading specification for a symbol."""

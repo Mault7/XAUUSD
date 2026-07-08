@@ -91,7 +91,15 @@ This repository contains a production-oriented scaffold for a Trading Signal Ass
 - Polling runner available at `backend/telegram_bot/runner.py`
 - Commands menu is registered automatically with Telegram via `set_my_commands`
 - Initial commands: `/start`, `/help`, `/health`, `/analyze`, `/scan`
+- Reply keyboard buttons are generated automatically from enabled assets
 - Run it with `python -m backend.telegram_bot.runner`
+
+## Fixed-Loss Risk Mode
+
+- Set `RISK_MODE=fixed_loss` to use a global money-risk model instead of account-percent sizing
+- `MAX_LOSS_USD` controls the maximum advisory loss per signal
+- `FIXED_LOT_SIZE` keeps a fixed MT5 volume such as `0.01`
+- In this mode the stop loss is derived from the symbol specification returned by MT5 and targets are anchored to nearby market structure when available
 
 ## Quick Start
 

@@ -19,6 +19,7 @@ class TelegramAlertFormatter(AlertFormatter):
         body = "\n".join(
             [
                 f"Activo: {symbol}",
+                f"Tipo de operacion: {'COMPRA' if direction == 'ALCISTA' else 'VENTA'}",
                 f"Direccion: {direction}",
                 f"Confianza: {score_breakdown.confidence:.2f}%",
                 f"Tendencia: {trend}",
@@ -36,6 +37,10 @@ class TelegramAlertFormatter(AlertFormatter):
                 f"TP1: {risk_plan.take_profit_1:.4f}",
                 f"TP2: {risk_plan.take_profit_2:.4f}",
                 f"TP3: {risk_plan.take_profit_3:.4f}",
+                "",
+                "Gestion de riesgo",
+                f"Lote: {risk_plan.lot_size:.2f}",
+                f"Perdida maxima estimada: {risk_plan.risk_amount:.2f} USD",
                 "",
                 "Riesgo/Beneficio",
                 f"{risk_plan.risk_reward:.2f}",
