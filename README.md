@@ -86,6 +86,13 @@ This repository contains a production-oriented scaffold for a Trading Signal Ass
 - Refactored risk, scoring, alert, and dashboard services onto one analysis context path
 - Reduced drift risk between endpoints and better foundation for persistence, caching, and scheduling
 
+## Telegram Bot
+
+- Polling runner available at `backend/telegram_bot/runner.py`
+- Commands menu is registered automatically with Telegram via `set_my_commands`
+- Initial commands: `/start`, `/help`, `/health`, `/analyze`, `/scan`
+- Run it with `python -m backend.telegram_bot.runner`
+
 ## Quick Start
 
 1. Create a virtual environment and install dependencies with `pip install -e .[dev]`.

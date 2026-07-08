@@ -8,6 +8,7 @@ from backend.application.services.indicator_service import IndicatorService
 from backend.application.services.market_data_service import MarketDataService
 from backend.application.services.risk_service import RiskService
 from backend.application.services.scoring_service import ScoringService
+from backend.application.services.telegram_command_service import TelegramCommandService
 from backend.application.services.structure_service import StructureService
 from backend.infrastructure.alerts.factory import build_alert_publisher
 from backend.infrastructure.alerts.formatter import TelegramAlertFormatter
@@ -78,6 +79,11 @@ class AppContainer:
             self.scoring_config_loader,
             self.analysis_pipeline_service,
             self.alert_publisher.channel_name,
+        )
+        self.telegram_command_service = TelegramCommandService(
+            self.asset_config_loader,
+            self.scoring_config_loader,
+            self.analysis_pipeline_service,
         )
 
 
