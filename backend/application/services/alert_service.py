@@ -25,6 +25,7 @@ class AlertService:
         self._analysis_pipeline_service = analysis_pipeline_service
         self._alert_publisher = alert_publisher
         self._published_alerts: dict[str, datetime] = {}
+        self._published_by_symbol: dict[str, datetime] = {}
 
     def preview_alerts(self) -> list[AlertPreviewResponse]:
         asset_config = self._asset_config_loader.load()
@@ -49,7 +50,8 @@ class AlertService:
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )
-            eligible, _ = self._evaluate_alert_eligibility(context, alert_policy)
+            context_map = self._build_context_map(asset, context, alert_policy, scoring_config)
+            eligible, _ = self._evaluate_alert_eligibility(context, context_map, alert_policy)
             previews.append(
                 AlertPreviewResponse(
                     symbol=asset.symbol,
@@ -87,7 +89,8 @@ class AlertService:
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )
-            eligible, reason = self._evaluate_alert_eligibility(context, alert_policy)
+            context_map = self._build_context_map(asset, context, alert_policy, scoring_config)
+            eligible, reason = self._evaluate_alert_eligibility(context, context_map, alert_policy)
             if eligible:
                 self._alert_publisher.publish(context.alert_message)
                 self._remember_alert(
@@ -96,6 +99,7 @@ class AlertService:
                     context.risk_plan.direction.value,
                     context.snapshot.candles[-1].timestamp.isoformat(),
                 )
+                self._remember_symbol_alert(context.asset_symbol)
                 results.append(
                     AlertDispatchResponse(
                         symbol=asset.symbol,
@@ -121,10 +125,21 @@ class AlertService:
     def _evaluate_alert_eligibility(
         self,
         context: AssetAnalysisContext,
+        context_map: dict[str, AssetAnalysisContext],
         alert_policy: AlertingConfig,
     ) -> tuple[bool, str]:
         if context.structure.trend_bias.value in {"sideways", "neutral"}:
             return False, "Alerta omitida: el mercado sigue en consolidacion o sin direccion clara."
+
+        aligned_contexts, conflicting_contexts = _context_alignment_counts(context, context_map)
+        if conflicting_contexts:
+            conflicts = ", ".join(sorted(conflicting_contexts))
+            return (
+                False,
+                f"Alerta omitida: el contexto de temporalidades mayores contradice la direccion actual ({conflicts}).",
+            )
+        if alert_policy.context_timeframes and aligned_contexts == 0:
+            return False, "Alerta omitida: M5 no esta alineado con M15/H1."
 
         if context.score.suppressed:
             return False, "Alerta omitida: las reglas de supresion siguen activas."
@@ -170,7 +185,39 @@ class AlertService:
         if self._is_in_cooldown(fingerprint, alert_policy.cooldown_minutes):
             return False, "Alerta omitida: la misma señal sigue en enfriamiento."
 
+        if self._is_symbol_in_cooldown(context.asset_symbol, alert_policy.symbol_cooldown_minutes):
+            return False, "Alerta omitida: este activo sigue en pausa para evitar sobreoperacion."
+
         return True, "Alerta apta para publicacion."
+
+    def _build_context_map(
+        self,
+        asset: object,
+        base_context: AssetAnalysisContext,
+        alert_policy: AlertingConfig,
+        scoring_config: object,
+    ) -> dict[str, AssetAnalysisContext]:
+        available = {timeframe.value for timeframe in asset.timeframes}
+        provider_symbol = asset.provider_symbols.get(
+            self._analysis_pipeline_service.provider_name,
+            asset.symbol,
+        )
+        threshold = float(asset.alert_threshold or scoring_config.defaults.signal_threshold)
+        context_map: dict[str, AssetAnalysisContext] = {}
+
+        for timeframe in alert_policy.context_timeframes:
+            normalized = timeframe.upper()
+            if normalized == base_context.timeframe.upper() or normalized not in available:
+                continue
+            context_map[normalized] = self._analysis_pipeline_service.build_asset_context(
+                asset_symbol=asset.symbol,
+                provider_symbol=provider_symbol,
+                timeframe=normalized,
+                risk_percent=asset.risk.percent,
+                threshold=threshold,
+            )
+
+        return context_map
 
     def _build_fingerprint(
         self,
@@ -202,6 +249,17 @@ class AlertService:
         fingerprint = self._build_fingerprint(symbol, timeframe, direction, candle_timestamp)
         self._published_alerts[fingerprint] = datetime.now(UTC)
 
+    def _is_symbol_in_cooldown(self, symbol: str, cooldown_minutes: int) -> bool:
+        if cooldown_minutes <= 0:
+            return False
+        published_at = self._published_by_symbol.get(symbol)
+        if published_at is None:
+            return False
+        return datetime.now(UTC) < published_at + timedelta(minutes=cooldown_minutes)
+
+    def _remember_symbol_alert(self, symbol: str) -> None:
+        self._published_by_symbol[symbol] = datetime.now(UTC)
+
 
 def _find_indicator(indicators: list[IndicatorSnapshot], name: str) -> IndicatorSnapshot | None:
     for indicator in indicators:
@@ -221,3 +279,24 @@ def _factor_strength(factor: ScoreFactor) -> float:
     if factor.weight <= 0:
         return 0.0
     return factor.score / factor.weight
+
+
+def _context_alignment_counts(
+    base_context: AssetAnalysisContext,
+    context_map: dict[str, AssetAnalysisContext],
+) -> tuple[int, set[str]]:
+    aligned = 0
+    conflicting: set[str] = set()
+    base_direction = base_context.risk_plan.direction.value
+
+    for timeframe, context in context_map.items():
+        direction = context.structure.trend_bias.value
+        if direction in {"sideways", "neutral"}:
+            conflicting.add(f"{timeframe} lateral")
+            continue
+        if direction == base_direction:
+            aligned += 1
+        else:
+            conflicting.add(f"{timeframe} {direction}")
+
+    return aligned, conflicting

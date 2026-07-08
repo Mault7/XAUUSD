@@ -22,7 +22,9 @@ class ScoringDefaults(BaseModel):
 class AlertingConfig(BaseModel):
     scan_interval_seconds: int = Field(ge=10)
     cooldown_minutes: int = Field(ge=0)
+    symbol_cooldown_minutes: int = Field(ge=0)
     preferred_timeframe: str = Field(min_length=2)
+    context_timeframes: list[str] = Field(default_factory=list)
     min_risk_reward: float = Field(ge=0)
     min_adx_strength: float = Field(ge=0, le=1)
     min_atr_strength: float = Field(ge=0, le=1)

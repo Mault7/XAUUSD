@@ -15,9 +15,11 @@ defaults:
   suppression_floor: 40
 
 alerting:
-  scan_interval_seconds: 60
+  scan_interval_seconds: 30
   cooldown_minutes: 20
+  symbol_cooldown_minutes: 45
   preferred_timeframe: M5
+  context_timeframes: [M15, H1]
   min_risk_reward: 0.90
   min_adx_strength: 0.35
   min_atr_strength: 0.25
