@@ -83,7 +83,11 @@ async def analyze_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE
     if update.effective_message is None or not update.effective_message.text:
         return
     symbol = update.effective_message.text.replace("Analizar ", "", 1).strip()
-    await _send_asset_analysis(update, symbol)
+    await _reply(
+        update,
+        f"Elige la temporalidad para {symbol}:",
+        reply_markup=_timeframe_keyboard(symbol),
+    )
 
 
 async def scan_market_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -100,9 +104,21 @@ async def analyze_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     await query.answer()
-    symbol = query.data.split(":", maxsplit=1)[1]
+
+    if query.data.startswith("analyze:"):
+        symbol = query.data.split(":", maxsplit=1)[1]
+        await query.message.reply_text(
+            f"Elige la temporalidad para {symbol}:",
+            reply_markup=_timeframe_keyboard(symbol),
+        )
+        return
+
+    if not query.data.startswith("timeframe:"):
+        return
+
+    _, symbol, timeframe = query.data.split(":", maxsplit=2)
     container = get_container()
-    message = container.telegram_command_service.analyze_asset(symbol)
+    message = container.telegram_command_service.analyze_asset(symbol, timeframe)
     await query.message.reply_text(message, reply_markup=_main_keyboard())
 
 
@@ -116,9 +132,9 @@ async def _reply(update: Update, message: str, reply_markup: object | None = Non
         await update.effective_message.reply_text(message, reply_markup=reply_markup)
 
 
-async def _send_asset_analysis(update: Update, symbol: str) -> None:
+async def _send_asset_analysis(update: Update, symbol: str, timeframe: str | None = None) -> None:
     container = get_container()
-    message = container.telegram_command_service.analyze_asset(symbol)
+    message = container.telegram_command_service.analyze_asset(symbol, timeframe)
     await _reply(update, message, reply_markup=_main_keyboard())
 
 
@@ -136,6 +152,30 @@ def _analysis_keyboard() -> InlineKeyboardMarkup:
         rows.append(current_row)
 
     return InlineKeyboardMarkup(rows or [[InlineKeyboardButton("Sin activos", callback_data="noop")]])
+
+
+def _timeframe_keyboard(symbol: str) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    current_row: list[InlineKeyboardButton] = []
+
+    for timeframe in _asset_timeframes(symbol):
+        current_row.append(
+            InlineKeyboardButton(
+                timeframe,
+                callback_data=f"timeframe:{symbol}:{timeframe}",
+            )
+        )
+        if len(current_row) == 3:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    if not rows:
+        rows.append([InlineKeyboardButton("Sin temporalidades", callback_data="noop")])
+
+    return InlineKeyboardMarkup(rows)
 
 
 def _main_keyboard() -> ReplyKeyboardMarkup:
@@ -161,6 +201,18 @@ def _enabled_symbols() -> list[str]:
     return [asset.symbol for asset in asset_config.assets if asset.enabled]
 
 
+def _asset_timeframes(symbol: str) -> list[str]:
+    container = get_container()
+    asset_config = container.asset_config_loader.load()
+    normalized_symbol = symbol.upper()
+
+    for asset in asset_config.assets:
+        if asset.enabled and asset.symbol.upper() == normalized_symbol:
+            return [timeframe.value for timeframe in asset.timeframes]
+
+    return []
+
+
 def build_application() -> Application:
     settings = get_settings()
     if not settings.telegram_bot_token:
@@ -174,7 +226,7 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("health", health_command))
     application.add_handler(CommandHandler("analyze", analyze_command))
     application.add_handler(CommandHandler("scan", scan_command))
-    application.add_handler(CallbackQueryHandler(analyze_callback, pattern=r"^analyze:"))
+    application.add_handler(CallbackQueryHandler(analyze_callback, pattern=r"^(analyze|timeframe):"))
     application.add_handler(MessageHandler(filters.Regex(r"^Analizar .+"), analyze_text_button))
     application.add_handler(
         MessageHandler(filters.Regex("^Escanear mercado$"), scan_market_button)
