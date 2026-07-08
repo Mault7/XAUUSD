@@ -64,6 +64,12 @@ class DefaultRiskEngine(RiskEngine):
             )
 
         take_profit_1, take_profit_2, take_profit_3 = targets
+        entry_zone_low, entry_zone_high = _build_entry_zone(
+            entry=entry,
+            atr=atr,
+            risk_per_unit=risk_per_unit,
+            timeframe=snapshot.timeframe,
+        )
         reward = abs(take_profit_1 - entry)
         risk_reward = round(reward / risk_per_unit, 2)
         explanation = _build_explanation(
@@ -80,6 +86,8 @@ class DefaultRiskEngine(RiskEngine):
         return RiskPlan(
             direction=direction,
             entry=round(entry, 4),
+            entry_zone_low=round(entry_zone_low, 4),
+            entry_zone_high=round(entry_zone_high, 4),
             stop_loss=round(stop_loss, 4),
             take_profit_1=round(take_profit_1, 4),
             take_profit_2=round(take_profit_2, 4),
@@ -150,6 +158,21 @@ def _resolve_timeframe_targets(
         (targets[0], targets[1], targets[2]),
         f"Los objetivos se calcularon con estructura cercana y limites de ATR para {profile.name}, evitando recorridos inflados para este timeframe.",
     )
+
+
+def _build_entry_zone(
+    *,
+    entry: float,
+    atr: float,
+    risk_per_unit: float,
+    timeframe: Timeframe,
+) -> tuple[float, float]:
+    profile = _timeframe_profile(timeframe)
+    half_zone = min(
+        atr * profile.entry_zone_atr,
+        max(risk_per_unit * 0.35, atr * 0.10),
+    )
+    return entry - half_zone, entry + half_zone
 
 
 def _project_r_multiples(
@@ -260,12 +283,14 @@ class _TimeframeRiskProfile:
         min_stop_atr: float,
         max_stop_atr: float,
         stop_buffer_atr: float,
+        entry_zone_atr: float,
         target_atr_multipliers: tuple[float, float, float],
     ) -> None:
         self.name = name
         self.min_stop_atr = min_stop_atr
         self.max_stop_atr = max_stop_atr
         self.stop_buffer_atr = stop_buffer_atr
+        self.entry_zone_atr = entry_zone_atr
         self.target_atr_multipliers = target_atr_multipliers
 
 
@@ -276,6 +301,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=0.60,
             max_stop_atr=1.20,
             stop_buffer_atr=0.12,
+            entry_zone_atr=0.18,
             target_atr_multipliers=(0.80, 1.20, 1.80),
         ),
         Timeframe.M15: _TimeframeRiskProfile(
@@ -283,6 +309,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=0.70,
             max_stop_atr=1.50,
             stop_buffer_atr=0.15,
+            entry_zone_atr=0.20,
             target_atr_multipliers=(1.00, 1.60, 2.20),
         ),
         Timeframe.H1: _TimeframeRiskProfile(
@@ -290,6 +317,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=0.90,
             max_stop_atr=1.80,
             stop_buffer_atr=0.18,
+            entry_zone_atr=0.22,
             target_atr_multipliers=(1.20, 2.00, 2.80),
         ),
         Timeframe.H4: _TimeframeRiskProfile(
@@ -297,6 +325,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=1.00,
             max_stop_atr=2.20,
             stop_buffer_atr=0.22,
+            entry_zone_atr=0.25,
             target_atr_multipliers=(1.50, 2.50, 3.50),
         ),
         Timeframe.D1: _TimeframeRiskProfile(
@@ -304,6 +333,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=1.20,
             max_stop_atr=2.60,
             stop_buffer_atr=0.25,
+            entry_zone_atr=0.28,
             target_atr_multipliers=(1.80, 3.00, 4.20),
         ),
         Timeframe.W1: _TimeframeRiskProfile(
@@ -311,6 +341,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=1.40,
             max_stop_atr=3.00,
             stop_buffer_atr=0.30,
+            entry_zone_atr=0.30,
             target_atr_multipliers=(2.20, 3.60, 5.00),
         ),
         Timeframe.MN: _TimeframeRiskProfile(
@@ -318,6 +349,7 @@ def _timeframe_profile(timeframe: Timeframe) -> _TimeframeRiskProfile:
             min_stop_atr=1.60,
             max_stop_atr=3.40,
             stop_buffer_atr=0.35,
+            entry_zone_atr=0.35,
             target_atr_multipliers=(2.60, 4.20, 6.00),
         ),
     }

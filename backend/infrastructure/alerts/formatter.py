@@ -41,7 +41,8 @@ class TelegramAlertFormatter(AlertFormatter):
                 f"- Confianza: {score_breakdown.confidence:.2f}%",
                 "",
                 "Plan operativo",
-                f"- Entrada: {risk_plan.entry:.4f}",
+                f"- Zona de entrada: {risk_plan.entry_zone_low:.4f} a {risk_plan.entry_zone_high:.4f}",
+                f"- Precio guia: {risk_plan.entry:.4f}",
                 f"- Stop Loss: {risk_plan.stop_loss:.4f}",
                 f"- Take Profit 1: {risk_plan.take_profit_1:.4f}",
                 f"- Take Profit 2: {risk_plan.take_profit_2:.4f}",
@@ -64,6 +65,7 @@ class TelegramAlertFormatter(AlertFormatter):
                 f"- Activo: {symbol}",
                 f"- Temporalidad: {timeframe}",
                 f"- Tipo de operacion: {operation}",
+                f"- Zona de entrada: {risk_plan.entry_zone_low:.4f} - {risk_plan.entry_zone_high:.4f}",
             ]
         )
         return AlertMessage(

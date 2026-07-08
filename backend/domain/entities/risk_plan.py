@@ -7,6 +7,8 @@ from backend.domain.value_objects.signal_direction import SignalDirection
 class RiskPlan:
     direction: SignalDirection
     entry: float
+    entry_zone_low: float
+    entry_zone_high: float
     stop_loss: float
     take_profit_1: float
     take_profit_2: float

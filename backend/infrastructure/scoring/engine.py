@@ -63,10 +63,16 @@ class DefaultScoringEngine(ScoringEngine):
 
         total_score = round(sum(factor.score for factor in factors), 2)
         confidence = round(min(max(total_score, 0.0), 100.0), 2)
-        suppressed = confidence < max(threshold, config.defaults.suppression_floor) or risk_plan.risk_reward < 1.5
+        min_risk_reward = config.alerting.min_risk_reward
+        suppressed = (
+            confidence < max(threshold, config.defaults.suppression_floor)
+            or risk_plan.risk_reward < min_risk_reward
+        )
         reasons = [factor.explanation for factor in factors if factor.score >= factor.weight * 0.6]
-        if risk_plan.risk_reward < 1.5:
-            reasons.append("La relacion riesgo/beneficio esta por debajo del minimo aceptable actual.")
+        if risk_plan.risk_reward < min_risk_reward:
+            reasons.append(
+                f"La relacion riesgo/beneficio esta por debajo del minimo aceptable actual ({min_risk_reward:.2f})."
+            )
 
         return ScoreBreakdown(
             total_score=total_score,

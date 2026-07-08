@@ -11,16 +11,16 @@ weights:
   news_filter: 10
 
 defaults:
-  signal_threshold: 75
-  suppression_floor: 45
+  signal_threshold: 68
+  suppression_floor: 40
 
 alerting:
   scan_interval_seconds: 60
-  cooldown_minutes: 60
+  cooldown_minutes: 20
   preferred_timeframe: M5
-  min_risk_reward: 1.00
-  min_adx_strength: 0.45
-  min_atr_strength: 0.35
-  min_volume_strength: 0.15
-  min_trend_alignment_strength: 0.65
-  min_structure_strength: 0.60
+  min_risk_reward: 0.90
+  min_adx_strength: 0.35
+  min_atr_strength: 0.25
+  min_volume_strength: 0.08
+  min_trend_alignment_strength: 0.55
+  min_structure_strength: 0.50

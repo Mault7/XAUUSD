@@ -5,7 +5,7 @@ assets:
       mt5: XAUUSD.s
     timeframes: [D1, H4, H1, M15, M5]
     strategies: [trend_following, pullback]
-    alert_threshold: 75
+    alert_threshold: 68
     risk:
       percent: 1.0
   - symbol: EURUSD
@@ -14,7 +14,7 @@ assets:
       mt5: EURUSD
     timeframes: [D1, H4, H1, M15]
     strategies: [trend_following, breakout]
-    alert_threshold: 75
+    alert_threshold: 68
     risk:
       percent: 1.0
   - symbol: BTCUSD
@@ -23,7 +23,6 @@ assets:
       mt5: BTCUSD
     timeframes: [D1, H4, H1, M15]
     strategies: [trend_following, reversal]
-    alert_threshold: 80
+    alert_threshold: 72
     risk:
       percent: 0.5
-
