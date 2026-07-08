@@ -1,5 +1,5 @@
 from backend.application.services.analysis_pipeline_service import AnalysisPipelineService
-from backend.application.services.timeframe_selection import select_preferred_timeframe
+from backend.application.services.timeframe_selection import select_configured_timeframe, select_preferred_timeframe
 from backend.infrastructure.config.asset_loader import AssetConfigLoader
 from backend.infrastructure.config.scoring_loader import ScoringConfigLoader
 
@@ -46,7 +46,8 @@ class TelegramCommandService:
     def scan_market(self) -> str:
         asset_config = self._asset_config_loader.load()
         scoring_config = self._scoring_config_loader.load()
-        lines = ["Escaneo de mercado"]
+        scan_timeframe = scoring_config.alerting.preferred_timeframe
+        lines = [f"Escaneo de mercado en {scan_timeframe}"]
 
         for asset in asset_config.assets:
             if not asset.enabled or not asset.timeframes:
@@ -58,17 +59,22 @@ class TelegramCommandService:
             context = self._analysis_pipeline_service.build_asset_context(
                 asset_symbol=asset.symbol,
                 provider_symbol=provider_symbol,
-                timeframe=select_preferred_timeframe(asset.timeframes),
+                timeframe=select_configured_timeframe(
+                    asset.timeframes,
+                    scoring_config.alerting.preferred_timeframe,
+                ),
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )
             eligible = (not context.score.suppressed) and (
                 context.score.confidence >= context.score.threshold
             )
+            direction = self._translate_direction(context.structure.trend_bias.value)
+            status = self._scan_status_label(direction, eligible)
             lines.append(
-                f"- {asset.symbol}: {self._translate_direction(context.risk_plan.direction.value)} | "
-                f"Confianza {context.score.confidence:.2f} | "
-                f"{'ALERTA' if eligible else 'sin alerta'}"
+                f"- {asset.symbol}: {status} | "
+                f"Direccion {direction} | "
+                f"Confianza {context.score.confidence:.2f}"
             )
 
         return "\n".join(lines)
@@ -91,3 +97,16 @@ class TelegramCommandService:
             "neutral": "NEUTRAL",
         }
         return mapping.get(direction.lower(), direction.upper())
+
+    def _scan_status_label(self, direction: str, eligible: bool) -> str:
+        if direction == "LATERAL":
+            return "En consolidacion, no priorizar"
+        if eligible and direction == "ALCISTA":
+            return "Alcista, importante revisar"
+        if eligible and direction == "BAJISTA":
+            return "Bajista, se ve interesante"
+        if direction == "ALCISTA":
+            return "Alcista, aun sin confirmacion suficiente"
+        if direction == "BAJISTA":
+            return "Bajista, aun sin confirmacion suficiente"
+        return "Sin direccion clara"

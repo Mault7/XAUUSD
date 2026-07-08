@@ -40,6 +40,9 @@ talib = [
   "TA-Lib>=0.4.28,<0.5.0",
 ]
 
+[project.scripts]
+trading-signal-assistant = "backend.run_all:main"
+
 [tool.setuptools]
 include-package-data = true
 
@@ -71,4 +74,3 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-

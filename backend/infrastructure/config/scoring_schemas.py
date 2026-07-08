@@ -19,7 +19,19 @@ class ScoringDefaults(BaseModel):
     suppression_floor: float = Field(ge=0, le=100)
 
 
+class AlertingConfig(BaseModel):
+    scan_interval_seconds: int = Field(ge=10)
+    cooldown_minutes: int = Field(ge=0)
+    preferred_timeframe: str = Field(min_length=2)
+    min_risk_reward: float = Field(ge=0)
+    min_adx_strength: float = Field(ge=0, le=1)
+    min_atr_strength: float = Field(ge=0, le=1)
+    min_volume_strength: float = Field(ge=0, le=1)
+    min_trend_alignment_strength: float = Field(ge=0, le=1)
+    min_structure_strength: float = Field(ge=0, le=1)
+
+
 class ScoringConfig(BaseModel):
     weights: ScoringWeights
     defaults: ScoringDefaults
-
+    alerting: AlertingConfig

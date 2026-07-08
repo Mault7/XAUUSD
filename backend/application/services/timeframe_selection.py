@@ -21,3 +21,11 @@ def select_preferred_timeframe(timeframes: list[Timeframe]) -> str:
             return timeframe.value
 
     return timeframes[0].value
+
+
+def select_configured_timeframe(timeframes: list[Timeframe], preferred: str | None) -> str:
+    if preferred:
+        for timeframe in timeframes:
+            if timeframe.value.upper() == preferred.upper():
+                return timeframe.value
+    return select_preferred_timeframe(timeframes)

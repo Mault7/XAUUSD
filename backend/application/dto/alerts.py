@@ -16,4 +16,4 @@ class AlertDispatchResponse(BaseModel):
     published: bool
     channel: str
     message: str
-
+    timeframe: str | None = None

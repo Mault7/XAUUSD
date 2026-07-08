@@ -101,11 +101,23 @@ This repository contains a production-oriented scaffold for a Trading Signal Ass
 - `FIXED_LOT_SIZE` keeps a fixed MT5 volume such as `0.01`
 - In this mode the stop loss is derived from the symbol specification returned by MT5 and targets are anchored to nearby market structure when available
 
+## Automatic Alerts
+
+- Set `ALERT_CHANNEL=telegram` to publish automatic alerts to Telegram
+- Automatic alert quality gates are configured in `config/scoring.yaml` under `alerting`
+- Run the periodic scheduler with `python -m backend.infrastructure.scheduler.runner`
+- The scheduler applies confidence, risk/reward, ADX, ATR, volume, and cooldown filters before publishing
+
+## One Command
+
+- After installing the project with `pip install -e .[dev]`, start API, Telegram bot, and automatic scheduler together with `trading-signal-assistant`
+- Stop all services with `Ctrl+C`
+
 ## Quick Start
 
 1. Create a virtual environment and install dependencies with `pip install -e .[dev]`.
 2. Copy `.env.example` to `.env`.
-3. Run the API with `uvicorn backend.main:app --reload`.
+3. Run everything with `trading-signal-assistant`.
 4. Visit `http://localhost:8000/health`.
 
 ## References
