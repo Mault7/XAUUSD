@@ -68,6 +68,7 @@ class AnalysisPipelineService:
         alert_message = self._alert_formatter.format_message(
             symbol=asset_symbol,
             timeframe=timeframe,
+            snapshot=snapshot,
             indicators=indicators,
             score_breakdown=score,
             risk_plan=risk_plan,

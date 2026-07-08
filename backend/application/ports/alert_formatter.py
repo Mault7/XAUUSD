@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from backend.domain.entities.market_snapshot import MarketSnapshot
 from backend.domain.entities.alert_message import AlertMessage
 from backend.domain.entities.indicator_snapshot import IndicatorSnapshot
 from backend.domain.entities.risk_plan import RiskPlan
@@ -13,6 +14,7 @@ class AlertFormatter(ABC):
         self,
         symbol: str,
         timeframe: str,
+        snapshot: MarketSnapshot,
         indicators: list[IndicatorSnapshot],
         score_breakdown: ScoreBreakdown,
         risk_plan: RiskPlan,
