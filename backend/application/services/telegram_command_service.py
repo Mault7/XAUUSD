@@ -1,4 +1,5 @@
 from backend.application.services.analysis_pipeline_service import AnalysisPipelineService
+from backend.application.services.timeframe_selection import select_preferred_timeframe
 from backend.infrastructure.config.asset_loader import AssetConfigLoader
 from backend.infrastructure.config.scoring_loader import ScoringConfigLoader
 
@@ -25,7 +26,7 @@ class TelegramCommandService:
             if asset.symbol.upper() != normalized_symbol:
                 continue
 
-            selected_timeframe = timeframe or asset.timeframes[0].value
+            selected_timeframe = timeframe or select_preferred_timeframe(asset.timeframes)
             threshold = float(asset.alert_threshold or scoring_config.defaults.signal_threshold)
             provider_symbol = asset.provider_symbols.get(
                 self._analysis_pipeline_service.provider_name, asset.symbol
@@ -57,7 +58,7 @@ class TelegramCommandService:
             context = self._analysis_pipeline_service.build_asset_context(
                 asset_symbol=asset.symbol,
                 provider_symbol=provider_symbol,
-                timeframe=asset.timeframes[0].value,
+                timeframe=select_preferred_timeframe(asset.timeframes),
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )

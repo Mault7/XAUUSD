@@ -1,5 +1,6 @@
 from backend.application.dto.risk import RiskPlanResponse
 from backend.application.services.analysis_pipeline_service import AnalysisPipelineService
+from backend.application.services.timeframe_selection import select_preferred_timeframe
 from backend.infrastructure.config.asset_loader import AssetConfigLoader
 
 
@@ -25,7 +26,7 @@ class RiskService:
                 provider_symbol=asset.provider_symbols.get(
                     self._analysis_pipeline_service.provider_name, asset.symbol
                 ),
-                timeframe=asset.timeframes[0].value,
+                timeframe=select_preferred_timeframe(asset.timeframes),
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold),
             )

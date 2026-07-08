@@ -1,5 +1,6 @@
 from backend.application.dto.alerts import AlertDispatchResponse, AlertPreviewResponse
 from backend.application.services.analysis_pipeline_service import AnalysisPipelineService
+from backend.application.services.timeframe_selection import select_preferred_timeframe
 from backend.application.ports.alert_publisher import AlertPublisher
 from backend.infrastructure.config.asset_loader import AssetConfigLoader
 from backend.infrastructure.config.scoring_loader import ScoringConfigLoader
@@ -32,7 +33,7 @@ class AlertService:
                 provider_symbol=asset.provider_symbols.get(
                     self._analysis_pipeline_service.provider_name, asset.symbol
                 ),
-                timeframe=asset.timeframes[0].value,
+                timeframe=select_preferred_timeframe(asset.timeframes),
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )
@@ -67,7 +68,7 @@ class AlertService:
                 provider_symbol=asset.provider_symbols.get(
                     self._analysis_pipeline_service.provider_name, asset.symbol
                 ),
-                timeframe=asset.timeframes[0].value,
+                timeframe=select_preferred_timeframe(asset.timeframes),
                 risk_percent=asset.risk.percent,
                 threshold=float(asset.alert_threshold or scoring_config.defaults.signal_threshold),
             )

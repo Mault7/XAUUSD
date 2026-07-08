@@ -66,8 +66,9 @@ def _label_swings(points: list[SwingPoint], *, is_high: bool) -> list[SwingPoint
 def _build_levels(points: list[SwingPoint], level_kind: str) -> list[StructureLevel]:
     levels: list[StructureLevel] = []
     for point in points[-2:]:
+        level_label = "Soporte" if level_kind == "support" else "Resistencia"
         explanation = (
-            f"{level_kind.title()} derived from {point.label} near candle index {point.index}."
+            f"{level_label} derivado de {point.label} cerca de la vela indice {point.index}."
         )
         levels.append(StructureLevel(kind=level_kind, price=point.price, explanation=explanation))
     return levels
@@ -100,7 +101,7 @@ def _derive_structure_events(
             event_name = "BOS" if trend_bias == SignalDirection.BULLISH else "CHOCH"
             direction = SignalDirection.BULLISH
             explanation = (
-                f"Price closed above recent swing high {latest_high.price:.4f}, signaling {event_name}."
+                f"El precio cerro por encima del ultimo swing high en {latest_high.price:.4f}, senalando {event_name}."
             )
             events.append(
                 StructureEvent(
@@ -117,7 +118,7 @@ def _derive_structure_events(
             event_name = "BOS" if trend_bias == SignalDirection.BEARISH else "CHOCH"
             direction = SignalDirection.BEARISH
             explanation = (
-                f"Price closed below recent swing low {latest_low.price:.4f}, signaling {event_name}."
+                f"El precio cerro por debajo del ultimo swing low en {latest_low.price:.4f}, senalando {event_name}."
             )
             events.append(
                 StructureEvent(
@@ -129,7 +130,7 @@ def _derive_structure_events(
             )
 
     if not events:
-        explanation = "Price remains inside recent swing boundaries, so no BOS or CHOCH is confirmed."
+        explanation = "El precio sigue dentro de los ultimos limites estructurales; no hay BOS ni CHOCH confirmado."
         events.append(
             StructureEvent(
                 name="range_bound",
@@ -145,4 +146,3 @@ def _derive_structure_events(
 def _event_strength(reference_a: float, reference_b: float) -> float:
     distance = abs(reference_a - reference_b) / max(abs(reference_b), 1e-9)
     return round(min(max(distance / 0.01, 0.0), 1.0), 4)
-

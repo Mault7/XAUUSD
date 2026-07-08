@@ -49,7 +49,7 @@ class DefaultRiskEngine(RiskEngine):
             risk_amount = account_size * (risk_percent / 100)
             lot_size = round(risk_amount / risk_per_unit, 4)
             targets = _project_r_multiples(entry, direction, risk_per_unit)
-            target_note = "Targets projected at 1R, 2R, and 3R."
+            target_note = "Los objetivos se proyectaron en 1R, 2R y 3R."
 
         take_profit_1, take_profit_2, take_profit_3 = targets
         reward = abs(take_profit_1 - entry)
@@ -152,7 +152,7 @@ def _resolve_technical_targets(
     if not ordered:
         return (
             _project_r_multiples(entry, direction, fallback_distance),
-            "No nearby structure target was available, so targets were projected from the current risk distance.",
+            "No habia un objetivo estructural cercano, asi que los objetivos se proyectaron desde la distancia actual del riesgo.",
         )
 
     targets = ordered[:3]
@@ -167,7 +167,7 @@ def _resolve_technical_targets(
 
     return (
         (targets[0], targets[1], targets[2]),
-        "Targets were anchored to nearby structure levels and extended only when additional levels were missing.",
+        "Los objetivos se anclaron a niveles estructurales cercanos y solo se extendieron cuando faltaban niveles adicionales.",
     )
 
 
@@ -199,15 +199,15 @@ def _build_explanation(
     risk_mode: str,
     target_note: str,
 ) -> str:
-    operation = "buy" if direction == SignalDirection.BULLISH else "sell"
+    operation = "compra" if direction == SignalDirection.BULLISH else "venta"
     if risk_mode.lower() == "fixed_loss":
         return (
-            f"{operation.title()} setup from {entry:.4f} with stop at {stop_loss:.4f}. "
-            f"Fixed-loss mode caps advisory risk near {risk_amount:.2f} USD using lot size {lot_size:.2f}. "
+            f"Operacion de {operation} desde {entry:.4f} con stop en {stop_loss:.4f}. "
+            f"El modo de perdida fija limita el riesgo estimado a {risk_amount:.2f} USD usando un lote de {lot_size:.2f}. "
             f"{target_note}"
         )
     return (
-        f"{operation.title()} setup from {entry:.4f} with stop at {stop_loss:.4f}. "
-        f"Percent-risk mode sizes around {risk_amount:.2f} account currency units. "
+        f"Operacion de {operation} desde {entry:.4f} con stop en {stop_loss:.4f}. "
+        f"El modo porcentual dimensiona la operacion alrededor de {risk_amount:.2f} unidades monetarias de la cuenta. "
         f"{target_note}"
     )

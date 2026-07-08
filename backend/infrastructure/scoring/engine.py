@@ -28,36 +28,36 @@ class DefaultScoringEngine(ScoringEngine):
                 "trend_alignment",
                 weights.trend_alignment,
                 _trend_alignment_score(indicators, structure),
-                "Measures whether structure and directional indicators agree.",
+                "Mide si la estructura del mercado y los indicadores direccionales apuntan en la misma direccion.",
             ),
             _factor(
                 "structure",
                 weights.structure,
                 _structure_score(structure),
-                "Rewards constructive HH/HL or LH/LL sequencing and event quality.",
+                "Favorece una secuencia estructural limpia de HH/HL o LH/LL y eventos tecnicos de calidad.",
             ),
             _factor(
                 "support_resistance",
                 weights.support_resistance,
                 _support_resistance_score(snapshot, structure),
-                "Scores how cleanly price is positioned relative to nearby structure levels.",
+                "Evalua que tan bien ubicado esta el precio respecto a soportes y resistencias cercanos.",
             ),
-            _factor("rsi", weights.rsi, _indicator_strength(indicators, "RSI"), "Uses RSI strength."),
-            _factor("atr", weights.atr, _indicator_strength(indicators, "ATR"), "Uses ATR health."),
-            _factor("macd", weights.macd, _indicator_strength(indicators, "MACD"), "Uses MACD momentum."),
-            _factor("adx", weights.adx, _indicator_strength(indicators, "ADX"), "Uses ADX trend quality."),
-            _factor("volume", weights.volume, _indicator_strength(indicators, "Volume"), "Uses volume expansion."),
+            _factor("rsi", weights.rsi, _indicator_strength(indicators, "RSI"), "Usa la fortaleza relativa del RSI."),
+            _factor("atr", weights.atr, _indicator_strength(indicators, "ATR"), "Usa el estado actual de volatilidad medido por ATR."),
+            _factor("macd", weights.macd, _indicator_strength(indicators, "MACD"), "Usa el impulso y cruce del MACD."),
+            _factor("adx", weights.adx, _indicator_strength(indicators, "ADX"), "Usa la calidad y fuerza de la tendencia segun ADX."),
+            _factor("volume", weights.volume, _indicator_strength(indicators, "Volume"), "Usa la expansion o contraccion del volumen."),
             _factor(
                 "smart_money",
                 weights.smart_money,
                 _smart_money_placeholder(structure),
-                "Placeholder confluence score until smart-money detection is implemented.",
+                "Confluencia institucional provisional mientras se implementa la deteccion completa de smart money.",
             ),
             _factor(
                 "news_filter",
                 weights.news_filter,
                 1.0,
-                "Neutral news score until economic calendar suppression is implemented.",
+                "Filtro de noticias neutral mientras se implementa la supresion por calendario economico.",
             ),
         ]
 
@@ -66,7 +66,7 @@ class DefaultScoringEngine(ScoringEngine):
         suppressed = confidence < max(threshold, config.defaults.suppression_floor) or risk_plan.risk_reward < 1.5
         reasons = [factor.explanation for factor in factors if factor.score >= factor.weight * 0.6]
         if risk_plan.risk_reward < 1.5:
-            reasons.append("Risk/reward is below the current acceptance floor.")
+            reasons.append("La relacion riesgo/beneficio esta por debajo del minimo aceptable actual.")
 
         return ScoreBreakdown(
             total_score=total_score,
@@ -135,4 +135,3 @@ def _smart_money_placeholder(structure: StructureSnapshot) -> float:
     if structure.trend_bias != SignalDirection.SIDEWAYS:
         return 0.5
     return 0.3
-
