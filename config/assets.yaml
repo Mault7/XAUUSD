@@ -2,7 +2,7 @@ assets:
   - symbol: XAUUSD
     enabled: true
     provider_symbols:
-      mt5: XAUUSD
+      mt5: XAUUSD.s
     timeframes: [D1, H4, H1, M15, M5]
     strategies: [trend_following, pullback]
     alert_threshold: 75

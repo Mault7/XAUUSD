@@ -65,8 +65,8 @@ class TelegramCommandService:
                 context.score.confidence >= context.score.threshold
             )
             lines.append(
-                f"- {asset.symbol}: {context.risk_plan.direction.value.upper()} | "
-                f"Score {context.score.confidence:.2f} | "
+                f"- {asset.symbol}: {self._translate_direction(context.risk_plan.direction.value)} | "
+                f"Confianza {context.score.confidence:.2f} | "
                 f"{'ALERTA' if eligible else 'sin alerta'}"
             )
 
@@ -77,7 +77,16 @@ class TelegramCommandService:
         asset_config = self._asset_config_loader.load()
         enabled_assets = [asset.symbol for asset in asset_config.assets if asset.enabled]
         return (
-            "Trading Signal Assistant online\n"
-            f"Provider: {provider}\n"
-            f"Assets: {', '.join(enabled_assets)}"
+            "Trading Signal Assistant en linea\n"
+            f"Proveedor: {provider}\n"
+            f"Activos: {', '.join(enabled_assets)}"
         )
+
+    def _translate_direction(self, direction: str) -> str:
+        mapping = {
+            "bullish": "ALCISTA",
+            "bearish": "BAJISTA",
+            "sideways": "LATERAL",
+            "neutral": "NEUTRAL",
+        }
+        return mapping.get(direction.lower(), direction.upper())

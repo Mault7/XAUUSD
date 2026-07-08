@@ -13,20 +13,20 @@ class TelegramAlertFormatter(AlertFormatter):
         risk_plan: RiskPlan,
         structure: StructureSnapshot,
     ) -> AlertMessage:
-        direction = risk_plan.direction.value.upper()
-        trend = structure.trend_bias.value.capitalize()
-        reasons = score_breakdown.reasons[:5] or ["Multi-factor conditions are being evaluated."]
+        direction = _translate_direction(risk_plan.direction.value)
+        trend = _translate_direction(structure.trend_bias.value)
+        reasons = score_breakdown.reasons[:5] or ["Las condiciones multifactor todavía se están evaluando."]
         body = "\n".join(
             [
-                f"Asset: {symbol}",
-                f"Direction: {direction}",
-                f"Confidence: {score_breakdown.confidence:.2f}%",
-                f"Trend: {trend}",
+                f"Activo: {symbol}",
+                f"Direccion: {direction}",
+                f"Confianza: {score_breakdown.confidence:.2f}%",
+                f"Tendencia: {trend}",
                 "",
-                "Reasons",
+                "Razones",
                 *[f"- {reason}" for reason in reasons],
                 "",
-                "Entry",
+                "Entrada",
                 f"{risk_plan.entry:.4f}",
                 "",
                 "Stop Loss",
@@ -37,7 +37,7 @@ class TelegramAlertFormatter(AlertFormatter):
                 f"TP2: {risk_plan.take_profit_2:.4f}",
                 f"TP3: {risk_plan.take_profit_3:.4f}",
                 "",
-                "Risk Reward",
+                "Riesgo/Beneficio",
                 f"{risk_plan.risk_reward:.2f}",
             ]
         )
@@ -49,3 +49,12 @@ class TelegramAlertFormatter(AlertFormatter):
             confidence=score_breakdown.confidence,
         )
 
+
+def _translate_direction(direction: str) -> str:
+    mapping = {
+        "bullish": "ALCISTA",
+        "bearish": "BAJISTA",
+        "sideways": "LATERAL",
+        "neutral": "NEUTRAL",
+    }
+    return mapping.get(direction.lower(), direction.upper())
